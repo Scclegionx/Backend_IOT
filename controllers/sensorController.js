@@ -92,18 +92,15 @@ exports.sortByTimestamp = async (req, res) => {
 exports.getSensorDataByRange = async (req, res) => {
     const { start, end, minTemperature, maxTemperature, minHumidity, maxHumidity, minLight, maxLight } = req.query;
 
-    // Tạo object để chứa các điều kiện lọc
     let filterConditions = {};
 
-    // Nếu có tham số start và end (khoảng thời gian)
     if (start && end) {
         filterConditions.timestamp = {
-            $gte: new Date(start),
-            $lte: new Date(end)
+            $gte: new Date(start + 'Z'),
+            $lte: new Date(end + 'Z')
         };
     }
 
-    // Nếu có tham số minTemperature và maxTemperature (khoảng nhiệt độ)
     if (minTemperature && maxTemperature) {
         filterConditions.temperature = {
             $gte: Number(minTemperature),
@@ -111,7 +108,6 @@ exports.getSensorDataByRange = async (req, res) => {
         };
     }
 
-    // Nếu có tham số minHumidity và maxHumidity (khoảng độ ẩm)
     if (minHumidity && maxHumidity) {
         filterConditions.humidity = {
             $gte: Number(minHumidity),
@@ -119,7 +115,6 @@ exports.getSensorDataByRange = async (req, res) => {
         };
     }
 
-    // Nếu có tham số minLight và maxLight (khoảng ánh sáng)
     if (minLight && maxLight) {
         filterConditions.light_value = {
             $gte: Number(minLight),
@@ -127,8 +122,9 @@ exports.getSensorDataByRange = async (req, res) => {
         };
     }
 
+    console.log(filterConditions);
+
     try {
-        // Lấy dữ liệu từ MongoDB dựa trên các điều kiện lọc
         const sensors = await Sensor.find(filterConditions);
         res.json(sensors);
     } catch (error) {
