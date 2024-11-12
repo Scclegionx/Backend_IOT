@@ -4,10 +4,12 @@ const sensorRoutes = require('./routes/sensorRoutes');
 const mqttClient = require('./utils/mqtt');
 const ledRoutes = require('./routes/ledRoutes');
 const ahRoutes = require('./routes/actionHistoryRoutes');
+const cors = require('cors');
 
 
 const app = express();
 app.use(express.json());
+app.use(cors());
 
 
 function replaceNaNWithNegative(jsonString) {

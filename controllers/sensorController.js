@@ -29,105 +29,128 @@ exports.getLatestSensorData = async (req, res) => {
 };
 
 
-// Sort
+// Sort and paginated
 
-exports.sortByTemperature = async (req, res) => {
+exports.getSortedAndPaginatedData = async (req, res) => {
     try {
-        const { order = 'asc' } = req.query; // Nhận order từ query, mặc định là 'asc'
+        const { field = 'temperature', order = 'asc', page = 1, limit = 5 } = req.query; // Các tham số sắp xếp và phân trang
+        const validFields = ['temperature', 'humidity', 'light_value', 'timestamp']; // Các trường hợp cho phép
 
-        const sortOrder = order === 'desc' ? -1 : 1; // Nếu order là 'desc', dùng -1, còn lại là 1
-        const sensors = await Sensor.find().sort({ temperature: sortOrder });
+        // Kiểm tra trường hợp không hợp lệ
+        if (!validFields.includes(field)) {
+            return res.status(400).json({ error: 'Invalid sort field' });
+        }
 
-        res.json(sensors);
+        // Xác định thứ tự sắp xếp
+        const sortOrder = order === 'desc' ? -1 : 1;
+
+        // Lấy và phân trang
+        const sensors = await Sensor.find()
+            .sort({ [field]: sortOrder })
+            .skip((parseInt(page) - 1) * parseInt(limit))
+            .limit(parseInt(limit));
+
+        // Đếm tổng số bản ghi để tính số trang
+        const totalRecords = await Sensor.countDocuments();
+        const totalPages = Math.ceil(totalRecords / limit);
+
+        res.json({
+            data: sensors,
+            currentPage: parseInt(page),
+            totalPages,
+        });
     } catch (error) {
-        console.error('Error sorting by temperature:', error);
-        res.status(500).json({ error: 'Failed to sort by temperature' });
+        console.error(`Error fetching sorted and paginated data:`, error);
+        res.status(500).json({ error: 'Failed to fetch sorted and paginated data' });
     }
 };
 
-exports.sortByHumidity = async (req, res) => {
-    try {
-        const { order = 'asc' } = req.query; // Nhận order từ query, mặc định là 'asc'
-
-        const sortOrder = order === 'desc' ? -1 : 1; // Nếu order là 'desc', dùng -1, còn lại là 1
-        const sensors = await Sensor.find().sort({ humidity: sortOrder });
-
-        res.json(sensors);
-    } catch (error) {
-        console.error('Error sorting by humidity:', error);
-        res.status(500).json({ error: 'Failed to sort by humidity' });
-    }
-};
-
-exports.sortByLightValue = async (req, res) => {
-    try {
-        const { order = 'asc' } = req.query; // Nhận order từ query, mặc định là 'asc'
-
-        const sortOrder = order === 'desc' ? -1 : 1; // Nếu order là 'desc', dùng -1, còn lại là 1
-        const sensors = await Sensor.find().sort({ light_value: sortOrder });
-
-        res.json(sensors);
-    } catch (error) {
-        console.error('Error sorting by light_value:', error);
-        res.status(500).json({ error: 'Failed to sort by light_value' });
-    }
-};
-
-exports.sortByTimestamp = async (req, res) => {
-    try {
-        const { order = 'asc' } = req.query; // Nhận order từ query, mặc định là 'asc'
-
-        const sortOrder = order === 'desc' ? -1 : 1; // Nếu order là 'desc', dùng -1, còn lại là 1
-        const sensors = await Sensor.find().sort({ timestamp: sortOrder });
-
-        res.json(sensors);
-    } catch (error) {
-        console.error('Error sorting by timestamp:', error);
-        res.status(500).json({ error: 'Failed to sort by timestamp' });
-    }
-};
 
 // sensorData Range
 
 exports.getSensorDataByRange = async (req, res) => {
-    const { start, end, minTemperature, maxTemperature, minHumidity, maxHumidity, minLight, maxLight } = req.query;
+    const {
+        start, end, minTemperature, maxTemperature, minHumidity, maxHumidity, minLight, maxLight,
+        page = 1, limit = 5
+    } = req.query;
 
     let filterConditions = {};
 
-    if (start && end) {
+    // Lọc theo thời gian
+    if (start) {
         filterConditions.timestamp = {
-            $gte: new Date(start + 'Z'),
+            $gte: new Date(start + 'Z')
+        };
+    }
+    if (end) {
+        filterConditions.timestamp = {
+            ...filterConditions.timestamp,  // Giữ nguyên điều kiện min nếu có
             $lte: new Date(end + 'Z')
         };
     }
 
-    if (minTemperature && maxTemperature) {
+
+    // Lọc theo nhiệt độ nếu có min hoặc max
+    if (minTemperature) {
         filterConditions.temperature = {
-            $gte: Number(minTemperature),
-            $lte: Number(maxTemperature)
+            $gte: Number(minTemperature) // Lọc các bản ghi có nhiệt độ lớn hơn hoặc bằng minTemperature
+        };
+    }
+    if (maxTemperature) {
+        filterConditions.temperature = {
+            ...filterConditions.temperature,  // Giữ nguyên điều kiện min nếu có
+            $lte: Number(maxTemperature) // Lọc các bản ghi có nhiệt độ nhỏ hơn hoặc bằng maxTemperature
         };
     }
 
-    if (minHumidity && maxHumidity) {
+    // Lọc theo độ ẩm nếu có min hoặc max
+    if (minHumidity) {
         filterConditions.humidity = {
-            $gte: Number(minHumidity),
-            $lte: Number(maxHumidity)
+            $gte: Number(minHumidity) // Lọc các bản ghi có độ ẩm lớn hơn hoặc bằng minHumidity
+        };
+    }
+    if (maxHumidity) {
+        filterConditions.humidity = {
+            ...filterConditions.humidity,  // Giữ nguyên điều kiện min nếu có
+            $lte: Number(maxHumidity) // Lọc các bản ghi có độ ẩm nhỏ hơn hoặc bằng maxHumidity
         };
     }
 
-    if (minLight && maxLight) {
+    // Lọc theo giá trị ánh sáng nếu có min hoặc max
+    if (minLight) {
         filterConditions.light_value = {
-            $gte: Number(minLight),
-            $lte: Number(maxLight)
+            $gte: Number(minLight) // Lọc các bản ghi có giá trị ánh sáng lớn hơn hoặc bằng minLight
+        };
+    }
+    if (maxLight) {
+        filterConditions.light_value = {
+            ...filterConditions.light_value,  // Giữ nguyên điều kiện min nếu có
+            $lte: Number(maxLight) // Lọc các bản ghi có giá trị ánh sáng nhỏ hơn hoặc bằng maxLight
         };
     }
 
     console.log(filterConditions);
 
     try {
-        const sensors = await Sensor.find(filterConditions);
-        res.json(sensors);
+        // Lấy dữ liệu đã lọc và phân trang
+        const sensors = await Sensor.find(filterConditions)
+            .skip((parseInt(page) - 1) * parseInt(limit))  // Phân trang
+            .limit(parseInt(limit));  // Giới hạn số bản ghi trả về
+
+        // Tính tổng số bản ghi và số trang
+        const totalRecords = await Sensor.countDocuments(filterConditions);
+        const totalPages = Math.ceil(totalRecords / limit);
+
+        res.json({
+            data: sensors,
+            currentPage: parseInt(page),
+            totalPages
+        });
     } catch (error) {
-        res.status(500).json({ error: 'Error fetching data with multiple conditions' });
+        console.error('Error fetching data with range and pagination:', error);
+        res.status(500).json({ error: 'Error fetching data with range and pagination' });
     }
 };
+
+
+

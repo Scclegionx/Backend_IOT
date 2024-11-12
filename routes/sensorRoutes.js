@@ -11,10 +11,10 @@ router.get('/latest', sensorController.getLatestSensorData);
 
 router.get('/range', sensorController.getSensorDataByRange);
 
-router.get('/sort/temperature', sensorController.sortByTemperature);
-router.get('/sort/humidity', sensorController.sortByHumidity);
-router.get('/sort/light', sensorController.sortByLightValue);
-router.get('/sort/timestamp', sensorController.sortByTimestamp);
+router.get('/sort', sensorController.getSortedAndPaginatedData);
+
+
+
 
 
 module.exports = router;
