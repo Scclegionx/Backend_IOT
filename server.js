@@ -26,7 +26,6 @@ mqttClient.on('message', (topic, message) => {
 
         const sensorData = JSON.parse(validMessageString);
 
-        // Gọi hàm lưu dữ liệu vào MongoDB
         // const sensorController = require('./controllers/sensorController');
         // sensorController.saveSensorData(sensorData);
 

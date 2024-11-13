@@ -7,6 +7,8 @@ router.get('/', sensorController.getAllSensorData);
 
 router.get('/latest', sensorController.getLatestSensorData);
 
+router.get('/today', sensorController.getTodaySensorData);
+
 
 
 router.get('/range', sensorController.getSensorDataByRange);

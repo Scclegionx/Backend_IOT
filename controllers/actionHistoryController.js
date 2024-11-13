@@ -1,10 +1,14 @@
 const ActionHistory = require('../models/actionHistoryModel');
+const moment = require('moment-timezone');
 
 // Hàm save - Lưu dữ liệu vào database
 exports.save = async (req, res) => {
     try {
         const { device, action, timestamp } = req.body;
-        const newAction = new ActionHistory({ device, action, timestamp });
+
+        const utcTimestamp = moment(timestamp).tz("Asia/Ho_Chi_Minh").utc().toDate();
+
+        const newAction = new ActionHistory({ device, action, timestamp: utcTimestamp });
         await newAction.save();
         res.status(201).json(newAction);
     } catch (error) {
@@ -16,7 +20,11 @@ exports.save = async (req, res) => {
 exports.getAll = async (req, res) => {
     try {
         const actionHistories = await ActionHistory.find();
-        res.json(actionHistories);
+        const localActions = actionHistories.map(actionHistory => ({
+            ...actionHistory.toObject(),
+            timestamp: moment(actionHistory.timestamp).tz("Asia/Ho_Chi_Minh").format()
+        }));
+        res.json(localActions);
     } catch (error) {
         res.status(500).json({ error: 'Failed to retrieve action histories' });
     }

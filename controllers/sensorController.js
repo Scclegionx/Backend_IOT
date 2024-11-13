@@ -28,6 +28,18 @@ exports.getLatestSensorData = async (req, res) => {
     }
 };
 
+exports.getTodaySensorData = async (req, res) => {
+    try {
+        const startOfDay = new Date();
+        startOfDay.setHours(0, 0, 0, 0);
+
+        const todayData = await Sensor.find({ timestamp: { $gte: startOfDay } }).sort({ timestamp: 1 });
+        res.json(todayData);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+};
+
 
 // Sort and paginated
 
